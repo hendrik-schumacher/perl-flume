@@ -1,0 +1,11 @@
+use Config;
+use inc::Module::Install;
+all_from 'lib/Flume/Client.pm';
+readme_from('lib/Flume/Client.pm');
+build_requires 'Test::More', 0.88;
+test_requires 'Test::Exception';
+requires 'Try::Tiny';
+requires 'parent';
+requires 'Object::Tiny';
+auto_set_repository();
+WriteAll;

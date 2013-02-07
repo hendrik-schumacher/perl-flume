@@ -1,0 +1,20 @@
+NAME
+    Flume::Client - Apache Flume Client Implementation
+
+SYNOPSIS
+      use Flume::Client;
+
+DESCRIPTION
+    Functional Implementation of FlumeOG and FlumeNG Client in Perl.
+
+AUTHOR
+    Hendrik Schumacher <hendrik.schumacher@meetrics.de>
+
+COPYRIGHT
+    Copyright 2013 - Hendrik Schumacher
+
+LICENSE
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+SEE ALSO
