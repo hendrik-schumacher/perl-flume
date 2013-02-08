@@ -171,32 +171,37 @@ Takes the called method name and the response (scalar) and returns an integer (z
 sub parse_response {
 	my ($self, $method, $response) = @_;
 	if ($response ne '') {
-		foreach my $frame ($self->from_netty_frame($response)) {
-			my $reader = IO::String->new($frame);
-			# decode handshake response
-			my $handshake_response = Avro::BinaryDecoder->decode(
-				writer_schema => $self->{_handshake_response},
-				reader_schema => $self->{_handshake_response},
-				reader => $reader
-			);
-			if (ref($handshake_response) eq 'HASH') {
-				# store protocol if match is not BOTH
-				if ($handshake_response->{'match'} ne 'BOTH') {
-					push(@{$self->{_proto_map}}, $handshake_response->{serverProtocol});
-					$self->parse_proto_schemas();
-				}
-				# resend if match is NONE
-				if ($handshake_response->{'match'} eq 'NONE') {
-					return (2, undef);
-				}
-				# decode call response
-				my $call_response = Avro::BinaryDecoder->decode(
-					writer_schema => $self->{_proto_map}->[$self->{_server_proto}+1]->messages->{$method}->response,
-					reader_schema => $self->{_proto_map}->[$self->{_server_proto}+1]->messages->{$method}->response,
-					reader => $reader
-				);
-				return (0, $call_response);
+		my ($handshakeframe, $metaframe, $responseframe) = $self->from_netty_frame($response);
+		my $handshakereader = IO::String->new($handshakeframe);
+		# decode handshake response
+		my $handshake_response = Avro::BinaryDecoder->decode(
+			writer_schema => $self->{_handshake_response},
+			reader_schema => $self->{_handshake_response},
+			reader => $handshakereader
+		);
+		if (ref($handshake_response) eq 'HASH') {
+			# store protocol if match is not BOTH
+			if ($handshake_response->{'match'} ne 'BOTH') {
+				push(@{$self->{_proto_map}}, $handshake_response->{serverProtocol});
+				$self->parse_proto_schemas();
 			}
+			# resend if match is NONE
+			if ($handshake_response->{'match'} eq 'NONE') {
+				return (2, undef);
+			}
+			# hack: there seems to be an additional byte between handshake and response (perhaps something like meta)
+			# as a workaround we just take the last byte of the frame (we make sure that it isnt empty first)
+			if (length($responseframe) == 0) {
+				return (1, undef);
+			}
+			my $responsereader = IO::String->new(substr($responseframe, -1));
+			# decode call response
+			my $call_response = Avro::BinaryDecoder->decode(
+				writer_schema => $self->{_proto_map}->[$self->{_server_proto}+1]->messages->{$method}->response,
+				reader_schema => $self->{_proto_map}->[$self->{_server_proto}+1]->messages->{$method}->response,
+				reader => $responsereader
+			);
+			return (0, $call_response);
 		}
 	}
 	return (1, undef);
